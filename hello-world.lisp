@@ -6,7 +6,7 @@
 ;;; tutorial) in the Spark RDD Programming Guide.
 ;;; http://spark.apache.org/docs/latest/rdd-programming-guide.html It
 ;;; is intended to be instructional and demonstrate options and best
-;;; practices when using ABCL to interoperate with large JAva
+;;; practices when using ABCL to interoperate with large Java
 ;;; libraries.
 ;;; TODO:SN: Convert this to an org or MD file when it's done.
 
@@ -40,9 +40,7 @@ top-level form. See https://abcl.org/trac/ticket/338"
   (let ((conf (jss:new (jss:find-java-class "org.apache.spark.sparkConf")))) ; Do we need find-java-class ?
     (java:chain conf
                 ("setAppName" app-name)
-                ("setMaster"  master)
-;		("set" "spark.io.compression.codec" "snappy")
-		)))
+                ("setMaster"  master))))
 
 
 (defun make-spark-context (spark-config)
@@ -51,15 +49,24 @@ top-level form. See https://abcl.org/trac/ticket/338"
 
 ;;; Spark requires one, and only one, context. You'll probably want to
 ;;; set these to a different value. These are here as a convenience
-;;; when getting started.
-(defvar *spark-conf* (make-spark-config))
+;;; when getting started. This example uses a remote master. I had
+;;; difficulty getting a master to run on MS Windows. Having the Spark
+;;; context local (on Windows) and sending the jobs to the remote
+;;; master works well though.
+(defvar *spark-conf* (make-spark-config :master "spark://spark:7077")) ; Change master to suit your setup
 (defvar *sc*         (make-spark-context *spark-conf*))
 
 
+;;; This is neccessary, but not sufficient, to use Spark on MS
+;;; Windows. Generally, running Spark on MS Windows was an uphill
+;;; battle for me and using a remote master on a UNIX VM an easier
+;;; route.
 (defun set-hadoop-configuration ()
   "Configure Spark to use a local file system as the default for file:/// scheme
 
-Spark uses Hadoop JARs to read files, even when the files are on the local file system. Spark is not configured by default to use the local filesystem, even in 'local' master."
+Spark uses Hadoop JARs to read files, even when the files are on the
+local file system. Spark is not configured by default to use the local
+filesystem, even in 'local' master."
   (let ((hadoop-configuration (#"hadoopConfiguration" *sc*)))
     (#"set" hadoop-configuration "fs.file.impl" (#"getName" (jss:find-java-class "org.apache.hadoop.fs.LocalFileSystem")))))
 (set-hadoop-configuration)
@@ -100,11 +107,12 @@ Spark uses Hadoop JARs to read files, even when the files are on the local file 
 
 ;;; A more idiomatic way, using a JSS utility function is this:
 
-; We thought we needed progn here because JSS can't be used in a top
-; level form, but this doesn't work either
+;; I thought we needed progn here because JSS can't be used in a top
+;; level form, but this doesn't work either
 #+Ignore
 (progn
   (#"parallelize" *sc* (jlist-from-list '(1 2 3 4 5))))
+
 
 ;;; TODO: Insert some mention of Java's implementation of Arrays,
 ;;; Lists and other collections and how they map onto ABCL data
@@ -140,17 +148,23 @@ Spark uses Hadoop JARs to read files, even when the files are on the local file 
 ;;; JavaRDD<String> distFile = sc.textFile("data.txt");
 ;;; and the ABCL equivalent:
 
-;;; This isn't working yet. It appears that Hadoop JARS need to be
-;;; configured even for local filesystem access.
-
 #+Ignore
 (progn
-  (#"textFile" *sc* "data.txt"))
+  (defvar *lines* (#"textFile" *sc* "/usr/local/spark/README.md")))
+
 
 ;;; Be careful when looking at Java function names; camel case is
 ;;; important. To do this using the JAVA package:
 
-;;; TODO: put in example for calling an instance method using JAVA
+;;; TODO: put in example for calling an instance method using
+;;; JAVA:JCALL
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Basic RDD operations
+;;;
 
 
 
