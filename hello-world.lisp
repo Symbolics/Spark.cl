@@ -137,27 +137,38 @@ filesystem, even in 'local' master."
 ;;; (collection-type "java.util.ArrayList")). But then one would have
 ;;; to know about it in order to use it."
 
+;;; What you really need to know about Java arrays is this: Arrays are
+;;; primitive sequences of fixed size and element type. They are
+;;; implemented in the JVM itself (presumably in C++). Each array has
+;;; a (synthetic) array class represented in Java as <type>[].class,
+;;; e.g., int[].class or String[].class or Object[][].class.  Lists
+;;; are higher-level data structures, implemented in Java. They're
+;;; potentially heterogeneous in element type, have variable size, and
+;;; several implementations with different characteristics,
+;;; particularly wrt. performance and concurrency. ArrayList is one
+;;; such implementation: a List backed by a primitive array. Then
+;;; there's LinkedList, etc.
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; External Datasets
 ;;;
 
-;;; No suprises here. We'll use JSS to get a JavaRDD from a text
-;;; file. The Java code is:
+;;; The Java code is:
 ;;; JavaRDD<String> distFile = sc.textFile("data.txt");
-;;; and the ABCL equivalent:
+;;; In ABCL, there are two ways to do this, with JSS and with
+;;; functions in the JAVA package
 
 #+Ignore
 (progn
-  (defvar *lines* (#"textFile" *sc* "/usr/local/spark/README.md")))
-
+  (defvar *lines* (#"textFile" *sc* "/usr/local/spark/README.md"))) ; JSS syntax
 
 ;;; Be careful when looking at Java function names; camel case is
 ;;; important. To do this using the JAVA package:
 
-;;; TODO: put in example for calling an instance method using
-;;; JAVA:JCALL
+#+Ignore
+(defvar *lines* (jcall (jmethod "org.apache.spark.api.java.JavaRDD" "textFile") *sc* "/usr/local/spark/README.md"))
 
 
 
@@ -166,7 +177,28 @@ filesystem, even in 'local' master."
 ;;; Basic RDD operations
 ;;;
 
+;;; Having obtained a JavaRDD in the previous step, the tutorial
+;;; demonstrates mapping over each line and return its length:
+;;; JavaRDD<Integer> lineLengths = lines.map(s -> s.length());
 
+;;; This example means we'll need a lambda expression in ABCL.
+
+#+Ignore
+(progn
+  (defvar *line-lengths* (#"map" *lines* ???? ))) ; How to implement a JDK8 style lambda?
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Passing ABCL functions to Spark
+;;;
+
+;;; https://stackoverflow.com/questions/26817940/how-to-use-map-function-in-spark-with-java
+;;; https://stackoverflow.com/questions/4785969/can-you-write-a-java-class-with-abcl
+;;; https://abcl.org/trac/browser/trunk/abcl/examples/java-interface
+;;; https://blog.cyrusharmon.org/blog/cyrusblog/display/140
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
